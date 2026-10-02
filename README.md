@@ -1,6 +1,6 @@
 # TeklaHelper.AssemblyResolver
 
-[![CI](https://github.com/nguyenthanguth/TeklaStructures.AssemblyResolver/actions/workflows/ci.yml/badge.svg)](https://github.com/nguyenthanguth/TeklaStructures.AssemblyResolver/actions/workflows/ci.yml)
+[![CI](https://github.com/nguyenthanguth/TeklaHelper.AssemblyResolver/actions/workflows/ci.yml/badge.svg)](https://github.com/nguyenthanguth/TeklaHelper.AssemblyResolver/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/TeklaHelper.AssemblyResolver.svg)](https://www.nuget.org/packages/TeklaHelper.AssemblyResolver)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -181,15 +181,15 @@ The logger can be called from several threads at once. Exceptions thrown by it a
 ## Building from source
 
 ```shell
-git clone https://github.com/nguyenthanguth/TeklaStructures.AssemblyResolver.git
-cd TeklaStructures.AssemblyResolver
+git clone https://github.com/nguyenthanguth/TeklaHelper.AssemblyResolver.git
+cd TeklaHelper.AssemblyResolver
 dotnet build TeklaHelper.AssemblyResolver.slnx -c Release
 ```
 
 ### Packing
 
 ```shell
-dotnet pack TeklaHelper.AssemblyResolver/TeklaHelper.AssemblyResolver.csproj -c Release -o artifacts
+dotnet pack TeklaHelper.AssemblyResolver.csproj -c Release -o artifacts
 ```
 
 ## License

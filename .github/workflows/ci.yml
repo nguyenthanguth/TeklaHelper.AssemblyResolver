@@ -35,7 +35,7 @@ jobs:
         run: dotnet build TeklaHelper.AssemblyResolver.slnx -c Release --no-restore
 
       - name: Pack
-        run: dotnet pack TeklaHelper.AssemblyResolver/TeklaHelper.AssemblyResolver.csproj -c Release --no-build -o artifacts
+        run: dotnet pack TeklaHelper.AssemblyResolver.csproj -c Release --no-build -o artifacts
 
       - name: Upload package
         uses: actions/upload-artifact@v5

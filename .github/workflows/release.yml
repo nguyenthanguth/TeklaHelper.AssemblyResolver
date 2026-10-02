@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write # upload the packages to the GitHub Release
+  id-token: write # NuGet Trusted Publishing: exchange the GitHub OIDC token for a short-lived NuGet API key
 
 env:
   DOTNET_NOLOGO: true
@@ -44,17 +45,21 @@ jobs:
 
       - name: Pack
         shell: bash
-        run: dotnet pack TeklaHelper.AssemblyResolver/TeklaHelper.AssemblyResolver.csproj -c Release --no-build -o artifacts "-p:Version=$PACKAGE_VERSION"
+        run: dotnet pack TeklaHelper.AssemblyResolver.csproj -c Release --no-build -o artifacts "-p:Version=$PACKAGE_VERSION"
+
+      # Trusted Publishing: no stored secret, the key is issued per run and expires after about an hour.
+      # Requires a matching policy on nuget.org (Account > Trusted Publishing) for this repo and release.yml.
+      - name: NuGet login
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: nguyenthanguth # nuget.org profile name (not the email)
 
       - name: Push to NuGet
         shell: bash
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: |
-          if [ -z "$NUGET_API_KEY" ]; then
-            echo "::error::Repository secret NUGET_API_KEY is not set."
-            exit 1
-          fi
           # Pushing the .nupkg also pushes the matching .snupkg symbols package
           dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
 

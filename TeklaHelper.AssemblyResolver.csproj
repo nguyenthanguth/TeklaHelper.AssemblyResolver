@@ -17,8 +17,8 @@
     <Copyright>Copyright (c) 2026 nguyenthanguth</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageProjectUrl>https://github.com/nguyenthanguth/TeklaStructures.AssemblyResolver</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/nguyenthanguth/TeklaStructures.AssemblyResolver.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/nguyenthanguth/TeklaHelper.AssemblyResolver</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/nguyenthanguth/TeklaHelper.AssemblyResolver.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
@@ -35,7 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Update="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
