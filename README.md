@@ -1,0 +1,1 @@
+# TeklaStructures.AssemblyResolver
