@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>TeklaHelper.AssemblyResolver</RootNamespace>
+    <AssemblyName>TeklaHelper.AssemblyResolver</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>TeklaHelper.AssemblyResolver</PackageId>
+    <Version>1.0.0</Version>
+    <Description>Finds Tekla Structures installations in the Windows Registry and loads Tekla Open API assemblies from the installation that matches the requested assembly version.</Description>
+    <PackageTags>tekla;tekla-structures;open-api;assembly-resolver</PackageTags>
+    <Authors>nguyenthanguth</Authors>
+    <Copyright>Copyright (c) 2026 nguyenthanguth</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/nguyenthanguth/TeklaStructures.AssemblyResolver</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/nguyenthanguth/TeklaStructures.AssemblyResolver.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>
