@@ -1,27 +1,36 @@
-name: Release
+name: Publish to NuGet
 
-# Publishes the package to NuGet when a GitHub Release is published.
-# The package version is taken from the release tag, e.g. v1.2.0 -> 1.2.0, v1.3.0-beta.1 -> 1.3.0-beta.1.
+# Publishes the package when a GitHub Release is published, or on demand.
+# On a release the package version is taken from the tag, e.g. v1.2.0 -> 1.2.0, v1.3.0-beta.1 -> 1.3.0-beta.1;
+# on a manual run it is the <Version> in TeklaHelper.AssemblyResolver.csproj.
 on:
   release:
     types: [published]
-
-permissions:
-  contents: write # upload the packages to the GitHub Release
-  id-token: write # NuGet Trusted Publishing: exchange the GitHub OIDC token for a short-lived NuGet API key
+  workflow_dispatch:
 
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  # Passed through env instead of an expression inside scripts, so a crafted tag name cannot inject shell commands
+  # Passed through env instead of an expression inside scripts, so a crafted tag name cannot inject commands
   RELEASE_TAG: ${{ github.event.release.tag_name }}
 
 jobs:
   publish:
     runs-on: windows-latest
+    # A pwsh script that runs several commands reports only the exit code of its last one, because pwsh carries
+    # on past a command that fails. Such scripts therefore begin with $PSNativeCommandUseErrorActionPreference = $true
+    # (PowerShell 7.4 and later), which makes a failing command an error, and the $ErrorActionPreference = 'stop'
+    # that GitHub puts in front of every pwsh script ends the step on it.
+    defaults:
+      run:
+        shell: pwsh
+    permissions:
+      contents: write  # Upload the packages to the GitHub Release
+      packages: write  # Required for GitHub Packages
+      id-token: write  # Required for NuGet Trusted Publishing (OIDC)
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v5
 
       - name: Setup .NET
@@ -29,42 +38,67 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Get version from tag
-        shell: bash
+      - name: Get package version
         run: |
-          VERSION="${RELEASE_TAG#v}"
-          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::Tag is not a valid version. Use the format v1.2.3 or v1.2.3-beta.1."
-            exit 1
-          fi
-          echo "PACKAGE_VERSION=$VERSION" >> "$GITHUB_ENV"
+          $PSNativeCommandUseErrorActionPreference = $true
+          if ($env:RELEASE_TAG) {
+            $version = $env:RELEASE_TAG -replace '^v', ''
+            if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') {
+              Write-Output "::error::Tag is not a valid version. Use the format v1.2.3 or v1.2.3-beta.1."
+              exit 1
+            }
+          } else {
+            $version = dotnet msbuild TeklaHelper.AssemblyResolver.csproj -getProperty:Version
+          }
+          Write-Output "Package version: $version"
+          "PACKAGE_VERSION=$version" >> $env:GITHUB_ENV
 
-      - name: Build
-        shell: bash
-        run: dotnet build TeklaHelper.AssemblyResolver.slnx -c Release "-p:Version=$PACKAGE_VERSION"
+      - name: Restore
+        run: dotnet restore TeklaHelper.AssemblyResolver.slnx
 
-      - name: Pack
-        shell: bash
-        run: dotnet pack TeklaHelper.AssemblyResolver.csproj -c Release --no-build -o artifacts "-p:Version=$PACKAGE_VERSION"
+      - name: Build library
+        run: dotnet build TeklaHelper.AssemblyResolver.slnx -c Release --no-restore -warnaserror "-p:Version=$env:PACKAGE_VERSION"
+
+      - name: Pack package
+        run: dotnet pack TeklaHelper.AssemblyResolver.csproj -c Release --no-build -o artifacts "-p:Version=$env:PACKAGE_VERSION"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: packages
+          path: artifacts/*
+          if-no-files-found: error
+
+      - name: Attach packages to GitHub Release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload $env:RELEASE_TAG (Get-Item artifacts/*) --clobber
+
+      - name: Push packages to GitHub Packages
+        env:
+          GITHUB_PACKAGES_TOKEN: ${{ github.token }}
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          Get-ChildItem artifacts -Filter *.nupkg | ForEach-Object {
+            # GitHub Packages does not accept .snupkg symbol packages
+            dotnet nuget push $_.FullName --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --api-key $env:GITHUB_PACKAGES_TOKEN --no-symbols --skip-duplicate
+          }
 
       # Trusted Publishing: no stored secret, the key is issued per run and expires after about an hour.
-      # Requires a matching policy on nuget.org (Account > Trusted Publishing) for this repo and release.yml.
-      - name: NuGet login
+      # Requires a policy on nuget.org (Account > Trusted Publishing) for this repository and release.yml.
+      - name: Authenticate with NuGet (Trusted Publishing)
         id: nuget-login
         uses: NuGet/login@v1
         with:
-          user: nguyenthanguth # nuget.org profile name (not the email)
+          user: nguyenthanguth
 
-      - name: Push to NuGet
-        shell: bash
+      - name: Push packages to NuGet.org
         env:
           NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true
           # Pushing the .nupkg also pushes the matching .snupkg symbols package
-          dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
-
-      - name: Upload packages to GitHub Release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$RELEASE_TAG" artifacts/* --clobber
+          Get-ChildItem artifacts -Filter *.nupkg | ForEach-Object {
+            dotnet nuget push $_.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
+          }
