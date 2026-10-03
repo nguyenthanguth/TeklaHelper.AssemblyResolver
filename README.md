@@ -4,6 +4,16 @@
 [![NuGet](https://img.shields.io/nuget/v/TeklaHelper.AssemblyResolver.svg)](https://www.nuget.org/packages/TeklaHelper.AssemblyResolver)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+> [!IMPORTANT]
+> **Remove Tekla assemblies from the GAC:**
+> In some environments, the .NET runtime automatically loads older Tekla assemblies from the Global Assembly Cache (GAC) before `TeklaHelper.AssemblyResolver` can intercept the resolution. For example, an application targeting Tekla Structures 2026 may inadvertently load Tekla 2020 DLLs from the GAC, resulting in version mismatches and connection failures.
+>
+> Run the following PowerShell command (as Administrator) to remove any Tekla assemblies from the GAC so that `TeklaHelper.AssemblyResolver` will operate correctly:
+>
+> ```powershell
+> Get-ChildItem "C:\Windows\Microsoft.NET\assembly\*\Tekla*" -Directory | Remove-Item -Recurse -Force
+> ```
+
 Finds Tekla Structures installations in the Windows Registry and, at runtime, loads every DLL your application is missing from the folders of the Tekla Structures version it works with.
 
 This lets a standalone application (console, WPF, WinForms, …) reference the Tekla Open API **without copying any Tekla DLLs** next to the executable. When the runtime cannot find a DLL — a Tekla Open API assembly such as `Tekla.Structures.Model`, or one of its dependencies such as `Trimble.Remoting` or `System.Memory` — the resolver loads it from the matching Tekla Structures installation.
