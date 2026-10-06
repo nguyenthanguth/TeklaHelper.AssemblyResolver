@@ -14,6 +14,12 @@
 > Get-ChildItem "C:\Windows\Microsoft.NET\assembly\*\Tekla*" -Directory | Remove-Item -Recurse -Force
 > ```
 
+> [!IMPORTANT]
+> **Tekla Structures 2026+ supports only 64-bit (x64) extensions:**
+> With the continuous improvement of the Tekla Open API and the efforts to enable .NET for Tekla Structures that started with TeklaStructures 2024, starting with TeklaStructures 2026 only x64 extensions that use Tekla Open API are supported.
+>
+> See the [Tekla Discussion Forum announcement](https://forum.tekla.com/topic/40788-starting-with-teklastructures-2026-only-x64-tekla-open-api-extensions-are-supported/) for details.
+
 Finds Tekla Structures installations in the Windows Registry and, at runtime, loads every DLL your application is missing from the folders of the Tekla Structures version it works with.
 
 This lets a standalone application (console, WPF, WinForms, …) reference the Tekla Open API **without copying any Tekla DLLs** next to the executable. When the runtime cannot find a DLL — a Tekla Open API assembly such as `Tekla.Structures.Model`, or one of its dependencies such as `Trimble.Remoting` or `System.Memory` — the resolver loads it from the matching Tekla Structures installation.
@@ -184,6 +190,7 @@ The logger can be called from several threads at once. Exceptions thrown by it a
 
 - Windows with at least one Tekla Structures version installed.
 - An application that uses the Tekla Open API must target **.NET Framework 4.8** (`net48`).
+- Starting with Tekla Structures 2026, applications and extensions using the Tekla Open API must target **x64** (64-bit).
 
 > [!NOTE]
 > The resolver itself targets `netstandard2.0` and also loads DLLs correctly on .NET 6/8+. However, the Tekla Open API communicates with Tekla Structures through .NET Remoting, which does not exist on .NET Core / .NET 5+. On .NET 8, `new Model()` fails inside Tekla's own code with `TypeLoadException: Could not load type 'System.Runtime.Remoting.Lifetime.ClientSponsor'`, and `GetConnectionStatus()` returns `false`. This is a Tekla Open API limitation and cannot be fixed by the resolver. On .NET 6/8+ you can still use `TeklaInstallationFinder` to list installations.
