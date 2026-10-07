@@ -30,7 +30,7 @@ This lets a standalone application (console, WPF, WinForms, …) reference the T
 - Loads Tekla assemblies **only** from the installation with the same major version as requested (e.g. `2026.0.0.0` → Tekla 2026). It never silently loads a DLL from a different Tekla version unless you opt in.
 - Loads any other missing DLL (e.g. `Trimble.Remoting`, `System.Memory`, `Google.Protobuf`) **only** from the Tekla installation in use, so DLLs of different Tekla versions are never mixed.
 - Verifies the assembly name, version and `PublicKeyToken` of the file before loading it.
-- Supports both the new layout (`bin`, `bin\Net48Runtime` on Tekla 2026+) and the old layout (`nt\bin`, `nt\bin\plugins` on Tekla 2020 and earlier), plus extra sub-folders you declare in `AdditionalSearchDirectories`.
+- Supports both the new layout (`bin`, `bin\Net48Runtime` on Tekla 2026+) and the old layout (`nt\bin`, `nt\bin\plugins` on Tekla 2020 and earlier), the direct sub-folders of `bin` / `nt\bin` (e.g. `nt\bin\dialogs`), plus extra sub-folders you declare in `AdditionalSearchDirectories`.
 - Targets `netstandard2.0`. The Tekla Open API itself requires .NET Framework 4.8 — see [Requirements](#requirements).
 
 ## Installation
@@ -118,6 +118,9 @@ Directories are searched in this order inside each installation:
 3. `nt\bin\plugins` (Tekla 2020 and earlier)
 4. `nt\bin` (Tekla 2020 and earlier)
 5. `AdditionalSearchDirectories`, in the order they were added
+6. The direct sub-folders of `bin` and `nt\bin` not listed above, in alphabetical order (e.g. `nt\bin\dialogs`, which contains `Tekla.Structures.Dialog` on Tekla 2020)
+
+The sub-folders come last because some of them keep other versions of DLLs that are also in the main folders (for example `nt\bin\symed\dxkit.dll` on Tekla 2020).
 
 A request counts as a *Tekla assembly with a Tekla version* when its name starts with `Tekla.` or it is signed with the Tekla public key (`PublicKeyToken=2f04dbe497b71114`), **and** its major version is a year (2000–2099) or the major version of an installed Tekla (old numbering such as `21.1`). Third-party DLLs with similar version numbers (e.g. `DevExpress.Data.v21.1`) and Tekla libraries with their own versioning (e.g. `Tekla.Common.Geometry 4.7`) are treated as dependencies.
 
@@ -127,7 +130,7 @@ If no matching installation is found the resolver returns `null`, so the runtime
 
 ### Additional search directories
 
-Tekla keeps many DLLs in sub-folders (`bin\plugins\…`, `bin\applications\…`, `bin\Features\…`) that are not searched by default. Add the ones your application needs, relative to the installation directory:
+Only the direct sub-folders of `bin` and `nt\bin` are searched by default; deeper folders (`bin\plugins\Tekla\…`, `bin\applications\…`) are not. Add the ones your application needs, relative to the installation directory:
 
 ```csharp
 TeklaAssemblyResolver resolver = TeklaAssemblyResolver.Register();
@@ -135,7 +138,7 @@ resolver.AdditionalSearchDirectories.Add(@"bin\plugins\Tekla\Drawings\AdvancedGr
 resolver.AdditionalSearchDirectories.Add(@"nt\bin\plugins\Tekla");                           // Tekla 2020 and earlier
 ```
 
-Each relative path is resolved inside every installation, so the DLL still comes from the Tekla version in use; folders that do not exist in an installation are skipped. Absolute paths are used as-is. Sub-folders are not searched recursively on purpose: they can contain copies from other Tekla versions (for example `bin\applications\Tekla\Model\StatusSharing\Tekla.Structures.dll` is version 2024 in Tekla 2026).
+Each relative path is resolved inside every installation, so the DLL still comes from the Tekla version in use; folders that do not exist in an installation are skipped. Absolute paths are used as-is. Folders deeper than one level are not searched recursively on purpose: they can contain copies from other Tekla versions (for example `bin\applications\Tekla\Model\StatusSharing\Tekla.Structures.dll` is version 2024 in Tekla 2026).
 
 ### Version fallback
 

@@ -10,7 +10,7 @@
 
   <PropertyGroup>
     <PackageId>TeklaHelper.AssemblyResolver</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Description>Finds Tekla Structures installations in the Windows Registry and loads Tekla Open API assemblies from the installation that matches the requested assembly version.</Description>
     <PackageTags>tekla;tekla-structures;open-api;assembly-resolver</PackageTags>
     <Authors>nguyenthanguth</Authors>

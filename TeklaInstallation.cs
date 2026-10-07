@@ -24,6 +24,7 @@ namespace TeklaHelper.AssemblyResolver
         private Version _parsedVersion;
         private bool _parsedVersionComputed;
         private List<string> _binDirectories;
+        private List<string> _binSubDirectories; // set together with _binDirectories
 
         /// <summary>
         /// Root installation directory (registry value <c>MainDir</c>), e.g. <c>C:\TeklaStructures\</c>.
@@ -185,20 +186,28 @@ namespace TeklaHelper.AssemblyResolver
         /// - bin: Tekla 2021 and later
         /// - nt\bin\plugins: Tekla 2020 and earlier, contains the Open API DLLs (must come before nt\bin)
         /// - nt\bin: Tekla 2020 and earlier
+        /// - the direct sub-folders of bin and nt\bin not listed above, in alphabetical order
+        ///   (e.g. nt\bin\dialogs contains Tekla.Structures.Dialog on Tekla 2020). They come last because some of them
+        ///   keep other versions of DLLs that are also in the folders above (e.g. nt\bin\symed\dxkit.dll).
         /// </summary>
         /// <returns>List of bin directory paths that exist on disk (checked once, then cached).</returns>
         public List<string> GetBinDirectories()
         {
-            if (_binDirectories == null)
-            {
-                _binDirectories = FindBinDirectories();
-            }
-
-            return new List<string>(_binDirectories);
+            EnsureBinDirectories();
+            return _binDirectories.Concat(_binSubDirectories).ToList();
         }
 
-        private List<string> FindBinDirectories()
+        private void EnsureBinDirectories()
         {
+            if (_binDirectories == null)
+            {
+                _binDirectories = FindBinDirectories(out _binSubDirectories);
+            }
+        }
+
+        private List<string> FindBinDirectories(out List<string> subDirectories)
+        {
+            subDirectories = new List<string>();
             string installDir = InstallDirectory;
             if (installDir.Length == 0)
             {
@@ -207,16 +216,47 @@ namespace TeklaHelper.AssemblyResolver
 
             string net48RuntimeDir = Path.Combine(installDir, "bin", "Net48Runtime");
             string binDir = Path.Combine(installDir, "bin");
+            string ntBinDir = Path.Combine(installDir, "nt", "bin");
 
             string[] candidates =
             {
                 IsNetFramework ? net48RuntimeDir : binDir,
                 IsNetFramework ? binDir : net48RuntimeDir,
-                Path.Combine(installDir, "nt", "bin", "plugins"),
-                Path.Combine(installDir, "nt", "bin")
+                Path.Combine(ntBinDir, "plugins"),
+                ntBinDir
             };
 
-            return candidates.Where(Directory.Exists).ToList();
+            var directories = candidates.Where(Directory.Exists).ToList();
+
+            // Only one level deep: deeper folders can contain copies from other Tekla versions
+            // (e.g. bin\applications\Tekla\Model\StatusSharing\Tekla.Structures.dll is version 2024 in Tekla 2026)
+            subDirectories = GetSubDirectories(binDir)
+                .Concat(GetSubDirectories(ntBinDir))
+                .Where(x => !directories.Contains(x, StringComparer.OrdinalIgnoreCase))
+                .ToList();
+
+            return directories;
+        }
+
+        private static IEnumerable<string> GetSubDirectories(string directory)
+        {
+            if (!Directory.Exists(directory))
+            {
+                return Enumerable.Empty<string>();
+            }
+
+            try
+            {
+                return Directory.GetDirectories(directory).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Enumerable.Empty<string>();
+            }
+            catch (IOException)
+            {
+                return Enumerable.Empty<string>();
+            }
         }
 
         /// <summary>
@@ -231,7 +271,8 @@ namespace TeklaHelper.AssemblyResolver
         }
 
         /// <summary>
-        /// Searches the bin directories, then the additional directories, for a DLL by its simple name.
+        /// Searches the bin directories, then the additional directories, then the sub-folders of bin and nt\bin,
+        /// for a DLL by its simple name. Directories added on purpose come before the sub-folders found automatically.
         /// </summary>
         /// <param name="assemblySimpleName">Assembly name (e.g. "Tekla.Structures.Model" or "Tekla.Structures.Model.dll").</param>
         /// <param name="additionalDirectories">
@@ -249,12 +290,9 @@ namespace TeklaHelper.AssemblyResolver
                 ? assemblySimpleName
                 : $"{assemblySimpleName}.dll";
 
-            if (_binDirectories == null)
-            {
-                _binDirectories = FindBinDirectories();
-            }
+            EnsureBinDirectories();
 
-            foreach (string directory in _binDirectories.Concat(ResolveDirectories(additionalDirectories)))
+            foreach (string directory in _binDirectories.Concat(ResolveDirectories(additionalDirectories)).Concat(_binSubDirectories))
             {
                 string candidatePath;
                 try
